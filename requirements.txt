@@ -17,3 +17,11 @@ ruff==0.14.2
 sqlparse==0.5.3
 typing-extensions==4.15.0
 uritemplate==4.2.0
+
+# Added for classifieds backend
+# JWT auth
+djangorestframework-simplejwt==5.4.0
+# CORS middleware
+django-cors-headers==4.6.0
+# Images handling
+Pillow==11.0.0
