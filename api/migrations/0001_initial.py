@@ -3,6 +3,7 @@ from django.conf import settings
 
 
 class Migration(migrations.Migration):
+
     initial = True
 
     dependencies = [
@@ -14,8 +15,8 @@ class Migration(migrations.Migration):
             name='Category',
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=120, unique=True, verbose_name='Name')),
-                ('slug', models.SlugField(max_length=150, unique=True, verbose_name='Slug')),
+                ('name', models.CharField(help_text='Display name of the category', max_length=120, unique=True, verbose_name='Name')),
+                ('slug', models.SlugField(help_text='URL-friendly identifier', max_length=150, unique=True, verbose_name='Slug')),
                 ('is_active', models.BooleanField(default=True, verbose_name='Active')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Created at')),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Updated at')),
@@ -33,7 +34,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=200, verbose_name='Title')),
                 ('description', models.TextField(verbose_name='Description')),
-                ('price', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Price')),
+                ('price', models.DecimalField(decimal_places=2, help_text='Price should be greater than or equal to 0', max_digits=10, verbose_name='Price')),
                 ('location', models.CharField(blank=True, max_length=200, verbose_name='Location')),
                 ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')], default='PENDING', max_length=20, verbose_name='Status')),
                 ('rejected_reason', models.CharField(blank=True, max_length=255, verbose_name='Rejected reason')),

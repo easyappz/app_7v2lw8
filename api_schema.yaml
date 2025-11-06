@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: Easyappz Classifieds API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+                email: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { description: Validation error }
+  /auth/login:
+    post:
+      summary: Obtain JWT pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access: { type: string }
+                  refresh: { type: string }
+  /auth/refresh:
+    post:
+      summary: Refresh JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh: { type: string }
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access: { type: string }
+  /auth/me:
+    get:
+      summary: Current user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { description: Unauthorized }
+
+  /categories/:
+    get:
+      summary: List categories (active only for guests)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+                  next: { type: string, nullable: true }
+                  previous: { type: string, nullable: true }
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/Category' }
+    post:
+      summary: Create category (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Category' }
+      responses:
+        '201': { description: Created }
+  /categories/{id}/:
+    get:
+      summary: Retrieve category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+    patch:
+      summary: Update category (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Category' }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Delete category (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '204': { description: No Content }
+
+  /listings/:
+    get:
+      summary: Public listings (approved & active)
+      parameters:
+        - in: query
+          name: category
+          schema: { type: integer }
+        - in: query
+          name: price_min
+          schema: { type: number, format: decimal }
+        - in: query
+          name: price_max
+          schema: { type: number, format: decimal }
+        - in: query
+          name: query
+          schema: { type: string }
+        - in: query
+          name: ordering
+          schema: { type: string, enum: [created_at, -created_at, price, -price] }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: page_size
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedListings' }
+  /listings/{id}/:
+    get:
+      summary: Public listing details (unapproved are visible only to author/admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+        '404': { description: Not found }
+
+  /my/listings/:
+    get:
+      summary: List my listings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: page_size
+          schema: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedListings' } } } }
+    post:
+      summary: Create listing (PENDING by default or DRAFT)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, price, category]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                price: { type: number, format: decimal }
+                category: { type: integer }
+                location: { type: string }
+                status: { type: string, enum: [DRAFT, PENDING] }
+                images: { type: array, items: { type: string, format: binary } }
+                images_is_main: { type: array, items: { type: string }, description: "aligned flags to images" }
+                main_image_index: { type: integer }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+  /my/listings/{id}/:
+    get:
+      summary: Retrieve my listing
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+    patch:
+      summary: Update my listing
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                price: { type: number, format: decimal }
+                category: { type: integer }
+                location: { type: string }
+                status: { type: string, enum: [DRAFT, PENDING] }
+                images: { type: array, items: { type: string, format: binary } }
+                images_is_main: { type: array, items: { type: string } }
+                main_image_index: { type: integer }
+                remove_image_ids: { type: string, description: "JSON array or comma-separated ids" }
+                set_main_image_id: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+    delete:
+      summary: Delete my listing
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: No Content }
+
+  /admin/listings/:
+    get:
+      summary: Admin list listings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: category
+          schema: { type: integer }
+        - in: query
+          name: price_min
+          schema: { type: number, format: decimal }
+        - in: query
+          name: price_max
+          schema: { type: number, format: decimal }
+        - in: query
+          name: query
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [DRAFT, PENDING, APPROVED, REJECTED] }
+        - in: query
+          name: author
+          schema: { type: integer }
+        - in: query
+          name: is_active
+          schema: { type: boolean }
+        - in: query
+          name: ordering
+          schema: { type: string, enum: [created_at, -created_at, price, -price] }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: page_size
+          schema: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedListings' } } } }
+    post:
+      summary: Admin create listing
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, price, category]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                price: { type: number, format: decimal }
+                category: { type: integer }
+                location: { type: string }
+                status: { type: string, enum: [DRAFT, PENDING, APPROVED, REJECTED] }
+                images: { type: array, items: { type: string, format: binary } }
+                images_is_main: { type: array, items: { type: string } }
+                main_image_index: { type: integer }
+      responses:
+        '201': { description: Created }
+  /admin/listings/{id}/:
+    get:
+      summary: Admin retrieve listing
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK }
+    patch:
+      summary: Admin update listing
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                price: { type: number, format: decimal }
+                category: { type: integer }
+                location: { type: string }
+                status: { type: string, enum: [DRAFT, PENDING, APPROVED, REJECTED] }
+                images: { type: array, items: { type: string, format: binary } }
+                images_is_main: { type: array, items: { type: string } }
+                main_image_index: { type: integer }
+                remove_image_ids: { type: string }
+                set_main_image_id: { type: integer }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Admin delete listing
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: No Content }
+  /admin/listings/{id}/approve/:
+    post:
+      summary: Approve listing
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK }
+  /admin/listings/{id}/reject/:
+    post:
+      summary: Reject listing with reason
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: OK }
+  /admin/listings/{id}/toggle-active/:
+    patch:
+      summary: Toggle active flag
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK }
+
+  /admin/users/:
+    get:
+      summary: List users (admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: is_active
+          schema: { type: boolean }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: page_size
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+                  next: { type: string, nullable: true }
+                  previous: { type: string, nullable: true }
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+  /admin/users/{id}/toggle-active/:
+    patch:
+      summary: Toggle user active (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        email: { type: string, nullable: true }
+        is_active: { type: boolean }
+        is_staff: { type: boolean }
+        date_joined: { type: string, format: date-time }
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        parent: { type: integer, nullable: true }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ListingImage:
+      type: object
+      properties:
+        id: { type: integer }
+        image: { type: string, format: uri }
+        is_main: { type: boolean }
+        created_at: { type: string, format: date-time }
+    Listing:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number, format: decimal }
+        category: { $ref: '#/components/schemas/Category' }
+        author:
+          type: object
+          properties:
+            id: { type: integer }
+            username: { type: string }
+        location: { type: string }
+        status: { type: string, enum: [DRAFT, PENDING, APPROVED, REJECTED] }
+        rejected_reason: { type: string }
+        is_active: { type: boolean }
+        views_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        images:
+          type: array
+          items: { $ref: '#/components/schemas/ListingImage' }
+    PaginatedListings:
+      type: object
+      properties:
+        count: { type: integer }
+        next: { type: string, nullable: true }
+        previous: { type: string, nullable: true }
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/Listing' }
