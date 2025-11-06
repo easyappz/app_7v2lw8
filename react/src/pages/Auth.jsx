@@ -18,9 +18,9 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (tab === 'login') {
-        await login(username, password);
+        await login({ username, password });
       } else {
-        await register(username, password, email);
+        await register({ username, password, email });
       }
     } catch (e) {
       setError('Ошибка авторизации');
