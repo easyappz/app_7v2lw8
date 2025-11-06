@@ -3,6 +3,8 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -28,6 +30,7 @@ from .serializers import (
 User = get_user_model()
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
     """Register a new user with username, password and optional email."""
 

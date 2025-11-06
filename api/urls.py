@@ -1,4 +1,5 @@
 from django.urls import include, path
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.routers import SimpleRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -25,9 +26,9 @@ admin_router.register(r"users", AdminUserViewSet, basename="admin-user")
 
 urlpatterns = [
     # Auth
-    path("auth/register", RegisterView.as_view(), name="auth-register"),
-    path("auth/login", TokenObtainPairView.as_view(), name="auth-login"),
-    path("auth/refresh", TokenRefreshView.as_view(), name="auth-refresh"),
+    path("auth/register", csrf_exempt(RegisterView.as_view()), name="auth-register"),
+    path("auth/login", csrf_exempt(TokenObtainPairView.as_view()), name="auth-login"),
+    path("auth/refresh", csrf_exempt(TokenRefreshView.as_view()), name="auth-refresh"),
     path("auth/me", MeView.as_view(), name="auth-me"),
 
     # Public
