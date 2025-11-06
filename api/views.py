@@ -12,6 +12,8 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .filters import AdminListingFilter, PublicListingFilter
 from .models import Category, Listing, ListingImage, ListingStatus
@@ -93,6 +95,9 @@ class PublicListingViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = DefaultPagination
     parser_classes = [JSONParser]
     filterset_class = PublicListingFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["price", "created_at", "views_count"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -161,6 +166,9 @@ class AdminListingViewSet(viewsets.ModelViewSet):
     pagination_class = DefaultPagination
     queryset = Listing.objects.select_related("category", "author").prefetch_related("images")
     filterset_class = AdminListingFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["price", "created_at", "views_count"]
+    ordering = ["-created_at"]
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):
