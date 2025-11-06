@@ -1,76 +1,67 @@
 import instance from './axios';
+import { BASE_API_URL } from './config';
 
 let isRefreshing = false;
-let pendingQueue = [];
+let failedQueue = [];
 
-function subscribeTokenRefresh(cb) {
-  pendingQueue.push(cb);
-}
-
-function onRefreshed(newToken) {
-  pendingQueue.forEach(cb => cb(newToken));
-  pendingQueue = [];
-}
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config || {};
+    const originalRequest = error.config || {};
     const status = error.response?.status;
 
-    const shouldSkip = original.headers && original.headers['X-Skip-Auth-Refresh'] === '1';
-    if (status === 401 && !shouldSkip) {
-      if (original._retry) {
-        // avoid infinite loop
-        return Promise.reject(error);
-      }
-      original._retry = true;
-
-      const refresh = localStorage.getItem('refresh');
-      if (!refresh) {
-        // no refresh -> logout path
+    if (status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem('refresh');
+      if (!refreshToken) {
         localStorage.removeItem('token');
+        window.location.replace('/auth');
         return Promise.reject(error);
       }
 
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((newToken) => {
-            if (!newToken) {
-              reject(error);
-              return;
-            }
-            original.headers = original.headers || {};
-            original.headers['Authorization'] = `Bearer ${newToken}`;
-            resolve(instance(original));
-          });
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return instance(originalRequest);
+        }).catch((err) => {
+          return Promise.reject(err);
         });
       }
 
       isRefreshing = true;
       try {
-        const refreshResp = await instance.post('/api/auth/refresh', { refresh }, { headers: { 'X-Skip-Auth-Refresh': '1' } });
-        const newAccess = refreshResp.data?.access;
+        const res = await instance.post(`${BASE_API_URL}/auth/refresh`, { refresh: refreshToken });
+        const newAccess = res.data?.access;
         if (newAccess) {
           localStorage.setItem('token', newAccess);
-          onRefreshed(newAccess);
-          original.headers = original.headers || {};
-          original.headers['Authorization'] = `Bearer ${newAccess}`;
-          return instance(original);
+          processQueue(null, newAccess);
+          originalRequest.headers['Authorization'] = 'Bearer ' + newAccess;
+          return instance(originalRequest);
         }
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh');
-        onRefreshed('');
-        return Promise.reject(error);
       } catch (e) {
+        processQueue(e, null);
         localStorage.removeItem('token');
         localStorage.removeItem('refresh');
-        onRefreshed('');
+        window.location.replace('/auth');
         return Promise.reject(e);
       } finally {
         isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );

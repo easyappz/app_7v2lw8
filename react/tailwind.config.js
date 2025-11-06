@@ -1,38 +1,38 @@
-/* Easyappz Tailwind config */
-/** @type {import('tailwindcss').Config} */
+/* Tailwind config for Easyappz classifieds */
 module.exports = {
   content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./public/index.html"
+    './public/index.html',
+    './src/**/*.{js,jsx,ts,tsx,html}',
   ],
   theme: {
     extend: {
       colors: {
         brand: {
-          blue: "#0A84FF",
-          dark: "#0B1320"
+          blue: '#0A84FF',
         },
         ink: {
-          900: "#0b0b0b",
-          800: "#1a1a1a",
-          700: "#2a2a2a",
-          600: "#3a3a3a",
-          500: "#4f4f4f",
-          400: "#6b7280",
-          300: "#9ca3af",
-          200: "#d1d5db",
-          100: "#e5e7eb",
-          50:  "#f5f5f7"
-        }
+          50: '#F8FAFC',
+          100: '#F1F5F9',
+          200: '#E2E8F0',
+          300: '#CBD5E1',
+          400: '#94A3B8',
+          500: '#64748B',
+          600: '#475569',
+          700: '#334155',
+          800: '#1F2937',
+          900: '#0F172A',
+        },
       },
-      boxShadow: {
-        soft: "0 2px 12px rgba(0,0,0,0.06)",
-        hover: "0 8px 24px rgba(0,0,0,0.08)",
-      },
-      borderRadius: {
-        xl: "14px"
-      }
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtils = {
+        '.shadow-soft': {
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
+        }
+      };
+      addUtilities(newUtils, ['responsive']);
+    }
+  ],
 };
