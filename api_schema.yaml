@@ -91,14 +91,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count: { type: integer }
-                  next: { type: string, nullable: true }
-                  previous: { type: string, nullable: true }
-                  results:
-                    type: array
-                    items: { $ref: '#/components/schemas/Category' }
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
     post:
       summary: Create category (admin)
       security: [{ bearerAuth: [] }]
@@ -155,7 +149,7 @@ paths:
           schema: { type: string }
         - in: query
           name: ordering
-          schema: { type: string, enum: [created_at, -created_at, price, -price] }
+          schema: { type: string, enum: [created_at, -created_at, price, -price, views_count, -views_count] }
         - in: query
           name: page
           schema: { type: integer }
@@ -214,7 +208,7 @@ paths:
                 images_is_main: { type: array, items: { type: string }, description: "aligned flags to images" }
                 main_image_index: { type: integer }
       responses:
-        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+        '201': { description: Created }
   /my/listings/{id}/:
     get:
       summary: Retrieve my listing
@@ -279,7 +273,7 @@ paths:
           schema: { type: boolean }
         - in: query
           name: ordering
-          schema: { type: string, enum: [created_at, -created_at, price, -price] }
+          schema: { type: string, enum: [created_at, -created_at, price, -price, views_count, -views_count] }
         - in: query
           name: page
           schema: { type: integer }
