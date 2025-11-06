@@ -1,7 +1,9 @@
 from typing import List, Optional
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from .models import Category, Listing, ListingImage, ListingStatus
 
@@ -16,6 +18,37 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "email", "is_active", "is_staff", "date_joined"]
         read_only_fields = fields
+
+
+class RegisterSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=150,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This username is already taken.")],
+    )
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value: Optional[str]) -> str:
+        if not value:
+            return ""
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
+    def validate_password(self, value: str) -> str:
+        validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        email = validated_data.get("email") or ""
+        return User.objects.create_user(
+            username=validated_data["username"],
+            email=email,
+            password=validated_data["password"],
+        )
+
+    def to_representation(self, instance):
+        return UserSerializer(instance).data
 
 
 class CategorySerializer(serializers.ModelSerializer):

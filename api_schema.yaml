@@ -24,7 +24,12 @@ paths:
           description: Created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  access: { type: string }
+                  refresh: { type: string }
         '400': { description: Validation error }
   /auth/login:
     post:

@@ -14,6 +14,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -25,6 +26,7 @@ from .serializers import (
     ListingCreateUpdateSerializer,
     ListingSerializer,
     UserSerializer,
+    RegisterSerializer,
 )
 
 User = get_user_model()
@@ -32,26 +34,25 @@ User = get_user_model()
 
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
-    """Register a new user with username, password and optional email."""
+    """Register a new user with username, password and optional email.
+
+    Returns: { user: <User>, access: <jwt>, refresh: <jwt> }
+    """
 
     permission_classes = [AllowAny]
     parser_classes = [JSONParser]
 
     def post(self, request, *args, **kwargs):
-        username = (request.data.get("username") or "").strip()
-        email = (request.data.get("email") or "").strip() or ""
-        password = request.data.get("password")
-        if not username or not password:
-            return Response(
-                {"detail": "username and password are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if User.objects.filter(username=username).exists():
-            return Response(
-                {"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST
-            )
-        user = User.objects.create_user(username=username, email=email, password=password)
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        payload = {
+            "user": UserSerializer(user).data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class MeView(RetrieveAPIView):

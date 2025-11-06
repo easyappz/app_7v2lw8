@@ -63,17 +63,28 @@ class APICoreTests(MediaTempMixin, TestCase):
         return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
 
     def test_registration_login_and_me(self):
-        # Registration
-        res = self.client.post("/api/auth/register", {"username": "mike", "password": "secret", "email": "mike@example.com"}, format="json")
+        # Registration -> must return tokens and user
+        res = self.client.post(
+            "/api/auth/register",
+            {"username": "mike", "password": "secretPass1", "email": "mike@example.com"},
+            format="json",
+        )
         self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.data["username"], "mike")
+        self.assertIn("access", res.data)
+        self.assertIn("refresh", res.data)
+        self.assertIn("user", res.data)
+        self.assertEqual(res.data["user"]["username"], "mike")
         # Login
-        headers = self.auth_headers("mike", "secret")
+        headers = self.auth_headers("mike", "secretPass1")
         self.assertIsNotNone(headers)
         # Me
         res = self.client.get("/api/auth/me", **headers)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["username"], "mike")
+
+    def test_me_requires_auth(self):
+        res = self.client.get("/api/auth/me")
+        self.assertEqual(res.status_code, 401)
 
     def test_public_list_shows_only_approved_and_active_and_detail_rules(self):
         l1 = Listing.objects.create(
